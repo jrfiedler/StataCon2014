@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="UTF-8">
+	<title>read dta file</title>
+	<link rel="stylesheet" href="../SlickGrid/slick.grid.css" type="text/css"/>
+	<link rel="stylesheet" href="../SlickGrid/css/smoothness/jquery-ui-1.8.16.custom.css" type="text/css"/>
+	<link rel="stylesheet" href="../SlickGrid/plugins/slick.headermenu.css" type="text/css"/>
+	<style>
+		* {
+		  font-family: "Droid Sans Mono", monospace;
+		}
+	
+		/* alternating offsets */
+		.slick-row .cell-inner {
+			margin-right: 30px;
+		}
+	
+		.cell-main {
+			margin-left: 50px;
+		}
+
+		.slick-header-menu {
+			border: 1px solid #718BB7;
+			background: #f0f0f0;
+			background: #2b2b2b;
+			color: #eeeeee;
+			padding: 2px;
+			-moz-box-shadow: 2px 2px 2px silver;
+			-webkit-box-shadow: 2px 2px 2px silver;
+			min-width: 100px;
+			z-index: 20;
+		}
+		
+		.slick-header-menuitem {
+			padding: 2px 4px;
+			border: 1px solid transparent;
+			border-radius: 3px;
+		}
+		
+		.slick-header-menuitem:hover {
+			border-color: silver;
+			background: white;
+		}
+		
+		.slick-header-menuitem-disabled {
+			border-color: transparent !important;
+			background: inherit !important;
+		}
+
+		.slick-cell {
+			background: #000000;
+			color: #ffffff;
+			border-color: transparent !important;
+			line-height: 19px !important;
+		}
+		
+		#viewDiv {
+			position: absolute;
+		}
+		
+		body {
+			background: #000000;
+			color: #ffffff;
+		}
+	</style>
+</head>
+
+<body>
+	<form name="uploadForm">
+		<p><input id="uploadInput" type="file" onchange="dtaGrid.onNewFile(this.files)"></p>
+	</form>
+	<div id="gridDiv" style="width:100%;height:570px;"></div>
+	<div id="viewDiv">
+		<img class="cellImage" style="max-width:300px"/>
+	</div>
+    
+	<script src="../SlickGrid/lib/firebugx.js"></script>
+    
+	<script src="../SlickGrid/lib/jquery-1.7.min.js"></script>
+	<script src="../SlickGrid/lib/jquery-ui-1.8.16.custom.min.js"></script>
+	<script src="../SlickGrid/lib/jquery.event.drag-2.2.js"></script>
+    
+	<script src="../SlickGrid/slick.core.js"></script>
+	<script src="../SlickGrid/slick.formatters.js"></script>
+	<script src="../SlickGrid/slick.grid.js"></script>
+	<script src="../SlickGrid/plugins/slick.headermenu.js"></script>
+	
+	<script type="text/javascript" src="StataDta.js" charset="UTF-8"></script>
+    
+	<script>
+		// Simple JavaScript Templating
+		// John Resig - http://ejohn.org/ - MIT Licensed
+		  (function () {
+			var cache = {};
+
+			this.tmpl = function tmpl(str, data) {
+			  // Figure out if we're getting a template, or if we need to
+			  // load the template - and be sure to cache the result.
+			  var fn = !/\W/.test(str) ?
+				  cache[str] = cache[str] ||
+				  tmpl(document.getElementById(str).innerHTML) :
+
+				// Generate a reusable function that will serve as a template
+				// generator (and which will be cached).
+				new Function("obj",
+					"var p=[],print=function(){p.push.apply(p,arguments);};" +
+
+					// Introduce the data as local variables using with(){}
+					"with(obj){p.push('" +
+
+					// Convert the template into pure JavaScript
+					  str
+						  .replace(/[\r\t\n]/g, " ")
+						  .split("<%").join("\t")
+						  .replace(/((^|%>)[^\t]*)'/g, "$1\r")
+						  .replace(/\t=(.*?)%>/g, "',$1,'")
+						  .split("\t").join("');")
+						  .split("%>").join("p.push('")
+						  .split("\r").join("\\'") + "');}return p.join('');");
+
+			  // Provide some basic currying to the user
+			  return data ? fn(data) : fn;
+			};
+		  })();
+		  
+		var dtaGrid = {
+			makeGrid: function (dtaObj) {
+				var i,
+					j,
+					nvar = dtaObj._nvar,
+					typlist = dtaObj._typlist,
+					varlist = dtaObj._varlist,
+					varvals = dtaObj._varvals,
+					varname,
+					columns = [],
+					chars = dtaObj._chrdict,
+					options = {
+						editable: false,
+						enableAddRow: false,
+						enableCellNavigation: false,
+						enableColumnReorder: false
+					},
+					compiledTemplate,
+					hasTemplate = false,
+					height = Math.max(
+						document.documentElement.clientHeight,
+						window.innerHeight || 0
+					),
+					gridDiv = document.getElementById("gridDiv"),
+					viewDiv = document.getElementById("viewDiv");
+				
+				chars = ("_dta" in dtaObj._chrdict) ? dtaObj._chrdict._dta : false;
+				
+				if (chars && "_grid_template" in chars) {
+					hasTemplate = true;
+					columns = dtaGrid.doCustomGrid(dtaObj, options);
+				} else {
+					for (j = 0; j < nvar; j++) {
+						varname = varlist[j];
+						columns.push({
+							id: varname, 
+							name: varname,
+							field: varname
+						});
+					}
+				}
+				
+				// resize grid div
+				gridDiv.style.height = (height - gridDiv.offsetTop - 10) + "px";
+				
+				dtaGrid.grid = new Slick.Grid("#gridDiv", varvals, columns, options);
+				
+				if (!hasTemplate) {
+					var headerMenuPlugin = new Slick.Plugins.HeaderMenu({});
+					
+					for (var i = 0; i < columns.length; i++) {
+						columns[i].header = {
+							menu: {
+								items: [
+									{
+										iconImage: "../SlickGrid/images/sort-asc.gif",
+										title: "Sort Ascending",
+										command: "sort-asc"
+									},
+									{
+										iconImage: "../SlickGrid/images/sort-desc.gif",
+										title: "Sort Descending",
+										command: "sort-desc"
+									}
+								]
+							}
+						};
+						if (typlist[i] === 32768) {
+							columns[i].header.menu.items.push({
+								title: "as image",
+								command: "formatAsImage"
+							});
+							columns[i].header.menu.items.push({
+								title: "as audio",
+								command: "formatAsAudio"
+							});
+						}
+					}
+
+					headerMenuPlugin.onCommand.subscribe(function(e, args) {
+						switch (args.command) {
+						case "formatAsImage":
+							dtaGrid.formatAsImage(args);
+							break;
+						case "formatAsAudio":
+							dtaGrid.formatAsAudio(args);
+							break;
+						default:
+							alert("Sorry, " + args.command + " not yet implemented");
+						}
+					});
+
+					dtaGrid.grid.registerPlugin(headerMenuPlugin);
+					
+					viewDiv.style.zIndex = 1000;
+					
+					dtaGrid.grid.onMouseEnter.subscribe(function (e) {
+						var cellCoords = dtaGrid.grid.getCellFromEvent(e),
+							cellNode,
+							imgElements,
+							oldImage,
+							newImage;
+						
+						if (typlist[cellCoords.cell] === 32768) {
+							cellNode = dtaGrid.grid.getCellNode(cellCoords.row, cellCoords.cell);
+							imgElements = cellNode.getElementsByClassName("cellImage");
+							if (imgElements.length === 0) return;
+							oldImage = imgElements[0];
+							newImage = viewDiv.getElementsByClassName("cellImage")[0];
+							newImage.src = oldImage.src;
+							viewDiv.style.visibility = 'visible';
+							viewDiv.style.position = 'absolute';
+							viewDiv.style.top = e.clientY + 30 + 'px';
+							viewDiv.style.left = e.clientX + 40 + 'px';
+						}
+						e.stopPropagation();
+					});
+					
+					dtaGrid.grid.onMouseLeave.subscribe(function (e) {
+						var cell = dtaGrid.grid.getCellFromEvent(e);
+						if (typlist[cell.cell] === 32768) {
+							viewDiv.style.visibility = 'hidden';
+						}
+						e.stopPropagation();
+					});
+				}
+			},
+			onNewFile: function (files) {
+				var fileReader = new FileReader();
+				
+				fileReader.onload = function (e) {
+					dtaGrid.onFileLoad(new DataView(e.target.result)); 
+				};
+				
+				fileReader.readAsArrayBuffer(files[0]);
+			},
+			onFileLoad: function (dtaView) {
+				var dtaObj = StataDta.open(dtaView, true),
+					colName,
+					uarray,
+					revoke = window.URL.revokeObjectURL,
+					i;
+				
+				// clear out old saved values and object URLs 
+				// before making new grid
+				dtaGrid.colValues = {};
+				for (colName in dtaGrid.ojectURLs) {
+					if (dtaGrid.ojectURLs.hasOwnProperty(colName)) {
+						uarray = dtaGrid.objectURLs[colName];
+						for (i = 0; i < uarray.length; i++) {
+							revoke(uarray.pop());
+						}
+					}
+				}
+				dtaGrid.objectURLs = {};
+				
+				dtaGrid.makeGrid(dtaObj);
+			},			
+			makePreFmt: function (dtaObj) {
+				var i,
+					nvar = dtaObj._nvar,
+					fmts = {},
+					varlist = dtaObj._varlist,
+					chrdict = dtaObj._chrdict,
+					dtaFmts = dtaGrid.dtaFmts,
+					varname;
+				
+				for (i = 0; i < nvar; i++) {
+					varname = varlist[i];
+					if (varname in chrdict && "_formatter" in chrdict[varname]) {
+						fmts[varname] = dtaFmts[chrdict[varname]._formatter];
+					}
+				}
+				
+				return function (row, cell, value, columnDef, dataContext) {
+					var newContext = {};
+					for (key in dataContext) {
+						if (!dataContext.hasOwnProperty(key)) continue;
+						if (key in fmts) {
+							newContext[key] = fmts[key](row, key, dataContext[key], columnDef, dataContext);
+						} else {
+							newContext[key] = dataContext[key];
+						}
+					}
+					return newContext;
+				}
+			},
+			makeTemplate: function (tmplStr, preFmt) {
+				var script = document.createElement("script"),
+					compiledTemplate;
+				
+				script.setAttribute("type", "text/html");
+				script.setAttribute("id", "cellTemplate");
+				script.innerHTML = tmplStr;
+				document.body.appendChild(script);
+				
+				compiledTemplate = tmpl("cellTemplate");
+				if (preFmt) {
+					return function (row, cell, value, columnDef, dataContext) {
+						dataContext = preFmt(row, cell, value, columnDef, dataContext);
+						return compiledTemplate(dataContext);
+					}
+				}
+				
+				return function (row, cell, value, columnDef, dataContext) {
+					return compiledTemplate(dataContext);
+				}
+			},
+			
+			formatAsImage: function (args) {
+				var colToSet = args.column,
+					columns,
+					coli,
+					menuItem,
+					i;
+				
+				columns = dtaGrid.grid.getColumns();
+				for (i = 0; i < columns.length; i++) {
+					if (columns[i] === colToSet) {
+						coli = columns[i];
+						
+						coli.formatter = dtaGrid.dtaFmts.image;
+						
+						menuItem = coli.header.menu.items;
+						menuItem[2].iconImage = "../SlickGrid/images/tick.png";
+						delete menuItem[3].iconImage;
+						
+						if (!(coli.name in dtaGrid.colValues)) {
+							dtaGrid.colValues[coli.name] = [];
+							dtaGrid.objectURLs[coli.name] = [];
+						}
+						
+						break;
+					}
+				}
+				dtaGrid.grid.setColumns(columns);
+			},
+			
+			formatAsAudio: function (args) {
+				var colToSet = args.column,
+					columns,
+					coli,
+					menuItem,
+					i;
+				
+				columns = dtaGrid.grid.getColumns();
+				for (i = 0; i < columns.length; i++) {
+					if (columns[i] === colToSet) {
+						coli = columns[i];
+						
+						coli.formatter = dtaGrid.dtaFmts.audio;
+						
+						menuItem = coli.header.menu.items;
+						delete menuItem[2].iconImage;
+						menuItem[3].iconImage = "../SlickGrid/images/tick.png";
+						
+						if (!(coli.name in dtaGrid.colValues)) {
+							dtaGrid.colValues[coli.name] = [];
+							dtaGrid.objectURLs[coli.name] = [];
+						}
+						
+						break;
+					}
+				}
+				dtaGrid.grid.setColumns(columns);
+			},
+			
+			// Do custom changes and return column specification.
+			// This is called from makeGrid when dta file has template.
+			doCustomGrid: function (dtaObj, options) {
+				var columns,
+					preFmt,
+					styleNode,
+					chars = dtaObj._chrdict._dta;
+				
+				// write over options.rowHeight if dta contains info
+				if ("_grid_rowHeight" in chars) {
+					options.rowHeight = parseInt(chars._grid_rowHeight);
+				}
+				
+				preFmt = dtaGrid.makePreFmt(dtaObj);
+				
+				columns = [{
+					id: "layoutColumn",
+					name: dtaObj._dataLabel,
+					formatter: dtaGrid.makeTemplate(chars._grid_template, preFmt),
+					width: 500,
+					cssClass: "layoutColumn"
+				}];
+				
+				// write over columns[0].width if dta contains info
+				if ("_grid_colWidth" in chars) {
+					columns[0].width = parseInt(chars._grid_colWidth);
+				}
+				
+				if ("_grid_css" in chars) {
+					styleNode = document.createElement("style");
+					styleNode.innerHTML = chars._grid_css;
+					document.head.appendChild(styleNode);
+				}
+				
+				return columns;
+			},
+			dtaFmts: {
+				image: function (row, cell, value, columnDef, dataContext) {
+					var rv,
+						imageURL = "";
+					
+					rv = dtaGrid.colValues[columnDef.name][row];
+					if (typeof rv !== "undefined") {
+						return rv;
+					}
+					
+					if (!(value instanceof Blob)) {
+						// See if value is plausibly an object url created from a blob.
+						if (toString.call(value) === '[object String]' && 
+								value.slice(0,4) === "blob") {
+							imageURL = value;
+						}
+					} else {
+						imageURL = window.URL.createObjectURL(value);
+						dtaGrid.objectURLs[columnDef.name][row] = imageURL;
+					}
+					
+					rv = (imageURL) ? 
+						"<img src='" + imageURL + "' height='100%' class='cellImage'/>" : 
+						value;
+						
+					dtaGrid.colValues[columnDef.name][row] = rv;
+						
+					return rv;
+				},
+				audio: function (row, cell, value, columnDef, dataContext) {
+					var rv,
+						audioURL = "";
+					
+					rv = dtaGrid.colValues[columnDef.name][row];
+					if (typeof rv !== "undefined") {
+						return rv;
+					}
+					
+					if (!(value instanceof Blob)) {
+						// See if value is plausibly an object url created from a blob.
+						if (toString.call(value) === '[object String]' && 
+								value.slice(0,4) === "blob") {
+							audioURL = value;
+						}
+					} else {
+						audioURL = window.URL.createObjectURL(value);
+						dtaGrid.objectURLs[columnDef.name][row] = audioURL;
+					}
+					
+					rv = (audioURL) ? 
+						'<audio src="' + audioURL + 
+							'"type="audio/mpeg" controls>' + 
+							'Your browser does not support the audio element.' + 
+							'<audio/>' : 
+						value;
+						
+					dtaGrid.colValues[columnDef.name][row] = rv;
+						
+					return rv;
+				},
+				blobToURL: function (row, cell, value, columnDef, dataContext) {
+					var url = "",
+						urlObj = dtaGrid.objectURLs;
+					
+					//if (columnDef.name in urlObj && urlObj.hasOwnProperty(columnDef.name)) {
+					if (cell in urlObj && urlObj.hasOwnProperty(cell)) {
+						//url = urlObj[columnDef.name][row];
+						url = urlObj[cell][row];
+						if (typeof url !== "undefined") {
+							return url;
+						}
+					} else {
+						//urlObj[columnDef.name] = [];
+						urlObj[cell] = [];
+					}
+					
+					if (!(value instanceof Blob)) {
+						// See if value is plausibly an object url created from a blob.
+						if (toString.call(value) === '[object String]' && 
+								value.slice(0,4) === "blob") {
+							url = value;
+						}
+					} else {
+						url = window.URL.createObjectURL(value);
+						//urlObj[columnDef.name][row] = url
+						urlObj[cell][row] = url
+					}
+					
+					return url || value;
+				},
+				comma: function (row, cell, value, columnDef, dataContext) {
+					var parts = value.toString().split(".");
+					return parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ",") + (parts[1] ? "." + parts[1] : "");
+				}
+			},
+			colValues: {},
+			objectURLs: {}
+		};
+    </script>
+</body>
+</html>
