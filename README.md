@@ -2,6 +2,15 @@
 
 This repository contains or points to most of the code used in my presentation "Stata hybrids: updates and ideas". Instructions are given below for obtaining, configuring, and using this code.
 
+##Obtaining these files
+
+If you're a `git` user, you already know you can download this package with
+
+    git clone https://github.com/jrfiedler/StataCon2014
+
+If you're not a `git` user you can download a zip archive. If you're on the desktop version of the respository site,
+there's a button for on the right for downloading the zip archive.
+
 ##Updates to Python projects
 
 The GitHub repositories for last year's projects have been updated.
@@ -75,6 +84,8 @@ Once you have the files and directories arranged, simply open the html file in y
         ipython ntoebook --profile profile_name
  
     Then create a new notebook. An instance of Stata should be created automatically (give it a few seconds to open). Commands entered in the notebook should be sent to Stata, and you should see the Stata results appear in the notebook.
+
+8. If you need instructions for how to use the notebook, or how to create a new notebook (as in the last step), start [here](http://ipython.org/notebook.html). At the time of this writing that page links to resources for learning about the IPython Notebook and has an embedded video demonstrating usage.
 
 
 ####(Optional) modifying `log2html`
