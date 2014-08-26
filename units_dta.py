@@ -52,8 +52,6 @@ class RewriteNames(ast.NodeTransformer):
                 ctx = ast.Load()
             ), node)
 
-#unitsType = type(units.m)
-
 
 class UnitsRatio():
     def __init__(self, numer, denom):
@@ -65,8 +63,6 @@ class UnitsRatio():
         
     def __mul__(self, other):
         if isinstance(other, UnitsRatio):
-            #return (self.numer * other.numer) / (self.denom * other.denom)
-            #return UnitsRatio(self.numer * other.numer, self.denom * other.denom)
             numerPart = (self.numer / other.denom).as_numer_denom()
             denomPart = (other.numer / self.denom).as_numer_denom()
             
@@ -96,26 +92,18 @@ class UnitsRatio():
     __rmul__ = __mul__
             
     def __rtruediv__(self, other):
-        #global unitsType
         if isinstance(other, UnitsRatio):
             a = other.numer / self.numer
             b = self.denom / other.denom
             return a * b
-            #if isinstance(a, unitsType) and isinstance(b, unitsType):
-            #    return  a * b
-            #return UnitsRatio(other.numer * self.denom, other.denom * self.numer)
         else:
             return UnitsRatio(other * self.denom, self.numer)
         
     def __truediv__(self, other):
-        #global unitsType
         if isinstance(other, UnitsRatio):
             a = self.numer / other.numer
             b = other.denom / self.denom
             return a * b
-            #if isinstance(a, unitsType) and isinstance(b, unitsType):
-            #    return  a * b
-            #return UnitsRatio(self.numer * other.denom, self.denom * other.numer)
         else:
             return UnitsRatio(self.numer, self.denom * other)
             
@@ -155,29 +143,10 @@ units.B = units.billion = units.billions = 10**9
 
 
 class UDta(Dta117):
-    #def __init__(self, *args, **kwargs):
-    #    Dta.__init__(self, *args, **kwargs)
 
     def _get_unit(self, unit_repr):
         unit_repr = unit_repr.replace("^", "**")
         
-        ## check that unit_repr only contains allowed stuff
-        #wasError = False
-        #try:
-        #    SyntaxChecker().check(unit_repr)
-        #except SyntaxError:
-        #    wasError = True
-        #
-        ## if error is raised in SyntaxChecker, the traceback can be long;
-        ## re-raising like this is an easy way to get a shorter accurate traceback
-        #if wasError:
-        #    raise SyntaxError('illegal syntax in unit str')
-        
-        # the following might only work in Python 3.3+;
-        # the commented-out code above should work in other Python versions
-        
-        # check that unit_repr only contains allowed stuff
-        #wasError = False
         try:
             SyntaxChecker().check(unit_repr)
         except SyntaxError:
@@ -200,16 +169,10 @@ class UDta(Dta117):
         # relationship should be direct or inverse
         # first, check direct by dividing
         comp = oldUnit / newUnit
-        #if all(isinstance(atom, sympyNumber) 
-        #        or isinstance(atom, numbers.Number) 
-        #        or isinstance(atom, CountUnit) for atom in comp.atoms()):
         if isinstance(comp, sympyNumber) or isinstance(comp, numbers.Number):
             return float(comp), "direct"
         # check whether inversely related by multiplying
         comp = oldUnit * newUnit
-        #if all(isinstance(atom, sympyNumber) 
-        #        or isinstance(atom, numbers.Number) 
-        #        or isinstance(atom, CountUnit) for atom in comp.atoms()):
         if isinstance(comp, sympyNumber) or isinstance(comp, numbers.Number):
             return float(comp), "inverse"
         # not directly conmparable, not inversely comparable
@@ -327,12 +290,6 @@ class UDta(Dta117):
                     not (isinstance(defn[0], str) and isinstance(defn[1], str))):
                 raise ValueError("units ratio should be specified as a 2-element tuple of str")
             setattr(units, name, UnitsRatio(*defn))
-        #elif count:
-        #    if defn:
-        #        raise ValueError("count units are fundamental, do not use definition")
-        #    
-        #    # set units.name
-        #    setattr(units, name, CountUnit(name, abbrev))
         else:
             if defn:
                 if not isinstance(defn, str):
