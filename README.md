@@ -25,7 +25,7 @@ The code for the "new ideas" below are meant for demonstration purposes and migh
 
 ###New idea 1: Physical units in dta files
 
-The code is [here](https://github.com/jrfiedler/StataCon2014/units_dta.py). This example requires Python 3, the `stata_dta` module from [here](https://github.com/jrfiedler/stata-dta-in-python) and the [Sympy module](http://docs.sympy.org/dev/install.html). 
+The code is [here](https://github.com/jrfiedler/StataCon2014/units_dta.py). This example requires Python 3.3+, the `stata_dta` module from [here](https://github.com/jrfiedler/stata-dta-in-python) and the [Sympy module](http://docs.sympy.org/dev/install.html). 
 
 This code assumes you will be opening a version 117 dta file (you might think of this as a "Stata 13" dta file), but it should also work with versions 115 and 114 ("Stata 11 and 12" dta files).
 
@@ -75,7 +75,7 @@ Once you have the files and directories arranged, simply open the html file in y
 
 4. Replace the `ipython_notebook_config.py` in that directory with the one from this repository, and put the `stata_interface.py` file in the `startup` sub-directory.
 
-5. In `stata_interface.py` change the directories to where you would like notebook files to be saved.
+5. In `ipython_notebook_config.py` change the directories to where you would like notebook files to be saved.
 
 6. In `stata_interface.py`, near the top, there is a section called "customization". Make any necessary changes to the values in that section.
 
